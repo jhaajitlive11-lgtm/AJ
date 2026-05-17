@@ -1059,26 +1059,101 @@ window.addEventListener('load',function(){
 
 // ── Pre-fill form with existing data ──
 function prefillForm(type,data){
+  // Helper — try both camelCase and underscore versions of a key
+  function v(d,k){
+    if(d[k]!==undefined&&d[k]!=='')return d[k];
+    // convert camelCase to underscore: localGold -> local_gold
+    var u=k.replace(/([A-Z])/g,function(m){return '_'+m.toLowerCase();});
+    if(d[u]!==undefined&&d[u]!=='')return d[u];
+    return '';
+  }
+
   if(type==='coach'){
-    var cf={'c-fn':data.firstName,'c-ln':data.lastName,'c-em':data.email,'c-ph':data.phone,'c-ad':data.aadhar,'c-ql':data.qualification,'c-or':data.organisation,'c-cy':data.city,'c-pc':data.pincode,'c-lg':data.localGold,'c-ls':data.localSilver,'c-lb':data.localBronze,'c-ln2':data.localTournaments,'c-dg':data.districtGold,'c-ds':data.districtSilver,'c-db':data.districtBronze,'c-dp':data.districtParticipation,'c-dn':data.districtTournaments,'c-sg':data.stateGold,'c-ss':data.stateSilver,'c-sb':data.stateBronze,'c-spp':data.stateParticipation,'c-sn':data.stateTournaments,'c-ng':data.nationalGold,'c-ns':data.nationalSilver,'c-nb':data.nationalBronze,'c-np':data.nationalParticipation,'c-nn':data.nationalTournaments};
-    Object.keys(cf).forEach(function(id){var el=document.getElementById(id);if(el&&cf[id]!==undefined)el.value=cf[id];});
+    // Map field ID -> data key (supports both formats)
+    var cf={
+      'c-fn':'firstName','c-ln':'lastName','c-em':'email','c-ph':'phone',
+      'c-ad':'aadhar','c-ql':'qualification','c-or':'organisation',
+      'c-cy':'city','c-pc':'pincode',
+      'c-lg':'local_gold','c-ls':'local_silver','c-lb':'local_bronze','c-ln2':'local_tournaments',
+      'c-dg':'district_gold','c-ds':'district_silver','c-db':'district_bronze',
+      'c-dp':'district_participation','c-dn':'district_tournaments',
+      'c-sg':'state_gold','c-ss':'state_silver','c-sb':'state_bronze',
+      'c-spp':'state_participation','c-sn':'state_tournaments',
+      'c-ng':'national_gold','c-ns':'national_silver','c-nb':'national_bronze',
+      'c-np':'national_participation','c-nn':'national_tournaments'
+    };
+    Object.keys(cf).forEach(function(id){
+      var el=document.getElementById(id);
+      if(el){var val=v(data,cf[id]);if(val!=='')el.value=val;}
+    });
+    // Category dropdown
     var catEl=document.getElementById('c-cat');
-    if(catEl&&data.sportsCategory){
+    var catVal=v(data,'sportsCategory');
+    if(catEl&&catVal){
       var cmap={'Olympic Team Sports':'olympic_team','Olympic Individual Sports':'olympic_ind','Indian Team Sports':'indian_team','Indian Individual Sports':'indian_ind'};
-      catEl.value=cmap[data.sportsCategory]||'';
+      catEl.value=cmap[catVal]||'';
       if(typeof updSports==='function')updSports();
-      setTimeout(function(){var sp=document.getElementById('c-sp');if(sp&&data.sport)sp.value=data.sport;},150);
+      setTimeout(function(){
+        var sp=document.getElementById('c-sp');
+        var spVal=v(data,'sport');
+        if(sp&&spVal)sp.value=spVal;
+      },200);
     }
+    // Unlock all sections
     ['c-s2','c-s3'].forEach(function(id){if(typeof ulk==='function')ulk(id);});
     if(typeof upP==='function')upP('c',3,3);
   }
+
   if(type==='school'){
-    var sf={'s-nm':data.schoolName,'s-cy':data.city,'s-co':data.coordinator,'s-ph':data.phone,'s-em':data.email,'s-pt':data.peTeachers,'s-ql':data.highestQualification,'s-dc':data.dedicatedCoaches,'s-hc':data.eventsHosted,'sl-g':data.localGold,'sl-s':data.localSilver,'sl-b':data.localBronze,'sl-n':data.localTournaments,'sd-g':data.districtGold,'sd-s':data.districtSilver,'sd-b':data.districtBronze,'sd-p':data.districtParticipation,'sd-n':data.districtTournaments,'ss-g':data.stateGold,'ss-s':data.stateSilver,'ss-b':data.stateBronze,'ss-p':data.stateParticipation,'ss-n':data.stateTournaments,'sn-g':data.nationalGold,'sn-s':data.nationalSilver,'sn-b':data.nationalBronze,'sn-p':data.nationalParticipation,'sn-n':data.nationalTournaments};
-    Object.keys(sf).forEach(function(id){var el=document.getElementById(id);if(el&&sf[id]!==undefined)el.value=sf[id];});
-    var dm={'s-gr':data.groundAvailability,'s-sf':data.surfaceType,'s-mk':data.sportsMarkings,'s-eq':data.equipment,'s-pr':data.programType,'s-cu':data.curriculumFollowed,'s-as':data.assessmentSystem,'s-lc':data.licensedCoaches,'s-af':data.afterSchoolProgram,'s-ho':data.hostedCompetition};
-    Object.keys(dm).forEach(function(id){var el=document.getElementById(id);if(el&&dm[id])el.value=dm[id];});
-    if(data.sportsActivities){var sp=data.sportsActivities.split(' | ');document.querySelectorAll('#s-sports input[type=checkbox]').forEach(function(cb){cb.checked=sp.indexOf(cb.value)>-1;});}
-    if(data.hostedCompetition==='Yes'){if(typeof togHost==='function')togHost();if(data.levelsHosted){var lv=data.levelsHosted.split(' | ');document.querySelectorAll('#s-lvls input[type=checkbox]').forEach(function(cb){cb.checked=lv.indexOf(cb.value)>-1;});}}
+    var sf={
+      's-nm':'schoolName','s-cy':'city','s-co':'coordinator',
+      's-ph':'phone','s-em':'email',
+      's-pt':'peTeachers','s-ql':'highestQualification','s-dc':'dedicatedCoaches',
+      's-hc':'eventsHosted',
+      'sl-g':'local_gold','sl-s':'local_silver','sl-b':'local_bronze','sl-n':'local_tournaments',
+      'sd-g':'district_gold','sd-s':'district_silver','sd-b':'district_bronze',
+      'sd-p':'district_participation','sd-n':'district_tournaments',
+      'ss-g':'state_gold','ss-s':'state_silver','ss-b':'state_bronze',
+      'ss-p':'state_participation','ss-n':'state_tournaments',
+      'sn-g':'national_gold','sn-s':'national_silver','sn-b':'national_bronze',
+      'sn-p':'national_participation','sn-n':'national_tournaments'
+    };
+    Object.keys(sf).forEach(function(id){
+      var el=document.getElementById(id);
+      if(el){var val=v(data,sf[id]);if(val!=='')el.value=val;}
+    });
+    // Dropdowns
+    var dm={
+      's-gr':'groundAvailability','s-sf':'surfaceType','s-mk':'sportsMarkings',
+      's-eq':'equipment','s-pr':'programType','s-cu':'curriculumFollowed',
+      's-as':'assessmentSystem','s-lc':'licensedCoaches',
+      's-af':'afterSchoolProgram','s-ho':'hostedCompetition'
+    };
+    Object.keys(dm).forEach(function(id){
+      var el=document.getElementById(id);
+      if(el){var val=v(data,dm[id]);if(val)el.value=val;}
+    });
+    // Sports checkboxes
+    var spAct=v(data,'sportsActivities');
+    if(spAct){
+      var spList=spAct.split(' | ');
+      document.querySelectorAll('#s-sports input[type=checkbox]').forEach(function(cb){
+        cb.checked=spList.indexOf(cb.value)>-1;
+      });
+    }
+    // Hosted levels
+    var hosted=v(data,'hostedCompetition');
+    if(hosted==='Yes'){
+      if(typeof togHost==='function')togHost();
+      var lvlStr=v(data,'levelsHosted');
+      if(lvlStr){
+        var lvList=lvlStr.split(' | ');
+        document.querySelectorAll('#s-lvls input[type=checkbox]').forEach(function(cb){
+          cb.checked=lvList.indexOf(cb.value)>-1;
+        });
+      }
+    }
+    // Unlock all sections
     ['s-s2','s-s3','s-s4','s-s5','s-s6'].forEach(function(id){if(typeof ulk==='function')ulk(id);});
     if(typeof upP==='function')upP('s',6,6);
   }
