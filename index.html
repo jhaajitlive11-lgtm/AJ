@@ -1007,7 +1007,82 @@ function gsl(n){
   document.getElementById('snum').textContent=cs+1;
 }
 function cslide(d){gsl(cs+d);clearInterval(ap);ap=setInterval(function(){gsl(cs+1);},4500);}
-window.addEventListener('load',function(){ap=setInterval(function(){gsl(cs+1);},4500);});
+window.addEventListener('load',function(){
+  ap=setInterval(function(){gsl(cs+1);},4500);
+
+  // ── Edit Link Handler ──
+  var params=new URLSearchParams(window.location.search);
+  var coachToken=params.get('edit_coach');
+  var schoolToken=params.get('edit_school');
+
+  if(coachToken||schoolToken){
+    var type=coachToken?'coach':'school';
+    var token=coachToken||schoolToken;
+
+    // Hide all page sections — show only the form
+    ['nav','.hero','#video','#about','#offer','#sports-cats','#glimpses','footer'].forEach(function(sel){
+      var el=document.querySelector(sel);
+      if(el)el.style.display='none';
+    });
+
+    // Scroll to top
+    window.scrollTo(0,0);
+
+    // Add edit notice banner
+    var banner=document.createElement('div');
+    banner.style.cssText='background:var(--navy);color:var(--white);text-align:center;padding:14px 20px;font-size:0.85rem;font-weight:600;border-bottom:3px solid var(--gold);position:fixed;top:0;left:0;right:0;z-index:9999';
+    banner.innerHTML='✏️ &nbsp;You are editing your previous submission &nbsp;·&nbsp; Token: <span style="color:var(--gold);font-family:monospace">'+token+'</span>';
+    document.body.prepend(banner);
+
+    // Push choose-nom down below banner
+    var nomSec=document.getElementById('choose-nom');
+    if(nomSec){nomSec.style.paddingTop='80px';nomSec.style.background='var(--off-white)';}
+
+    // Open correct form immediately
+    openForm(type);
+
+    // Scroll form into view
+    setTimeout(function(){
+      var panel=document.getElementById(type+'Panel');
+      if(panel)panel.scrollIntoView({behavior:'smooth',block:'start'});
+    },300);
+
+    // Fetch + prefill from Apps Script
+    if(typeof SUBMIT_URL!=='undefined'&&SUBMIT_URL!=='PASTE_YOUR_APPS_SCRIPT_URL_HERE'){
+      fetch(SUBMIT_URL+'?action=getEdit&token='+token+'&type='+type)
+        .then(function(r){return r.json();})
+        .then(function(data){if(data&&data.found)prefillForm(type,data);})
+        .catch(function(e){console.log('Prefill error:',e);});
+    }
+  }
+});
+
+// ── Pre-fill form with existing data ──
+function prefillForm(type,data){
+  if(type==='coach'){
+    var cf={'c-fn':data.firstName,'c-ln':data.lastName,'c-em':data.email,'c-ph':data.phone,'c-ad':data.aadhar,'c-ql':data.qualification,'c-or':data.organisation,'c-cy':data.city,'c-pc':data.pincode,'c-lg':data.localGold,'c-ls':data.localSilver,'c-lb':data.localBronze,'c-ln2':data.localTournaments,'c-dg':data.districtGold,'c-ds':data.districtSilver,'c-db':data.districtBronze,'c-dp':data.districtParticipation,'c-dn':data.districtTournaments,'c-sg':data.stateGold,'c-ss':data.stateSilver,'c-sb':data.stateBronze,'c-spp':data.stateParticipation,'c-sn':data.stateTournaments,'c-ng':data.nationalGold,'c-ns':data.nationalSilver,'c-nb':data.nationalBronze,'c-np':data.nationalParticipation,'c-nn':data.nationalTournaments};
+    Object.keys(cf).forEach(function(id){var el=document.getElementById(id);if(el&&cf[id]!==undefined)el.value=cf[id];});
+    var catEl=document.getElementById('c-cat');
+    if(catEl&&data.sportsCategory){
+      var cmap={'Olympic Team Sports':'olympic_team','Olympic Individual Sports':'olympic_ind','Indian Team Sports':'indian_team','Indian Individual Sports':'indian_ind'};
+      catEl.value=cmap[data.sportsCategory]||'';
+      if(typeof updSports==='function')updSports();
+      setTimeout(function(){var sp=document.getElementById('c-sp');if(sp&&data.sport)sp.value=data.sport;},150);
+    }
+    ['c-s2','c-s3'].forEach(function(id){if(typeof ulk==='function')ulk(id);});
+    if(typeof upP==='function')upP('c',3,3);
+  }
+  if(type==='school'){
+    var sf={'s-nm':data.schoolName,'s-cy':data.city,'s-co':data.coordinator,'s-ph':data.phone,'s-em':data.email,'s-pt':data.peTeachers,'s-ql':data.highestQualification,'s-dc':data.dedicatedCoaches,'s-hc':data.eventsHosted,'sl-g':data.localGold,'sl-s':data.localSilver,'sl-b':data.localBronze,'sl-n':data.localTournaments,'sd-g':data.districtGold,'sd-s':data.districtSilver,'sd-b':data.districtBronze,'sd-p':data.districtParticipation,'sd-n':data.districtTournaments,'ss-g':data.stateGold,'ss-s':data.stateSilver,'ss-b':data.stateBronze,'ss-p':data.stateParticipation,'ss-n':data.stateTournaments,'sn-g':data.nationalGold,'sn-s':data.nationalSilver,'sn-b':data.nationalBronze,'sn-p':data.nationalParticipation,'sn-n':data.nationalTournaments};
+    Object.keys(sf).forEach(function(id){var el=document.getElementById(id);if(el&&sf[id]!==undefined)el.value=sf[id];});
+    var dm={'s-gr':data.groundAvailability,'s-sf':data.surfaceType,'s-mk':data.sportsMarkings,'s-eq':data.equipment,'s-pr':data.programType,'s-cu':data.curriculumFollowed,'s-as':data.assessmentSystem,'s-lc':data.licensedCoaches,'s-af':data.afterSchoolProgram,'s-ho':data.hostedCompetition};
+    Object.keys(dm).forEach(function(id){var el=document.getElementById(id);if(el&&dm[id])el.value=dm[id];});
+    if(data.sportsActivities){var sp=data.sportsActivities.split(' | ');document.querySelectorAll('#s-sports input[type=checkbox]').forEach(function(cb){cb.checked=sp.indexOf(cb.value)>-1;});}
+    if(data.hostedCompetition==='Yes'){if(typeof togHost==='function')togHost();if(data.levelsHosted){var lv=data.levelsHosted.split(' | ');document.querySelectorAll('#s-lvls input[type=checkbox]').forEach(function(cb){cb.checked=lv.indexOf(cb.value)>-1;});}}
+    ['s-s2','s-s3','s-s4','s-s5','s-s6'].forEach(function(id){if(typeof ulk==='function')ulk(id);});
+    if(typeof upP==='function')upP('s',6,6);
+  }
+}
 </script>
 </body>
 </html>
